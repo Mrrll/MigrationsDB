@@ -1,18 +1,23 @@
 <?php
 // Solicitar datos de conexión a las bases de datos.
-echo "Introduce el nombre de la base de datos de origen: ";
-$base_origin = trim(fgets(STDIN));
-echo "Introduce para la base de datos de origen ($base_origin) el usuario: ";
-$usuario_origin = trim(fgets(STDIN));
-echo "Introduce para la base de datos de origen ($base_origin) la contraseña: ";
-$contraseña_origin = trim(fgets(STDIN));
-echo "Introduce el nombre de la base de datos de destino: ";
-$base_destination = trim(fgets(STDIN));
-echo "Introduce para la base de datos de destino ($base_destination) el usuario: ";
-$usuario_destination = trim(fgets(STDIN));
-echo "Introduce para la base de datos de destino ($base_destination) la contraseña: ";
-$contraseña_destination = trim(fgets(STDIN));
-
+// echo "Introduce el nombre de la base de datos de origen: ";
+// $base_origin = trim(fgets(STDIN));
+// echo "Introduce para la base de datos de origen ($base_origin) el usuario: ";
+// $usuario_origin = trim(fgets(STDIN));
+// echo "Introduce para la base de datos de origen ($base_origin) la contraseña: ";
+// $contraseña_origin = trim(fgets(STDIN));
+// echo "Introduce el nombre de la base de datos de destino: ";
+// $base_destination = trim(fgets(STDIN));
+// echo "Introduce para la base de datos de destino ($base_destination) el usuario: ";
+// $usuario_destination = trim(fgets(STDIN));
+// echo "Introduce para la base de datos de destino ($base_destination) la contraseña: ";
+// $contraseña_destination = trim(fgets(STDIN));
+$base_origin = "euros";
+$usuario_origin = "root";
+$contraseña_origin = "1234";
+$base_destination = "mybilling";
+$usuario_destination = "root";
+$contraseña_destination = "1234";
 // Conexión a las bases de datos
 try {
     $pdo_origin = new PDO("mysql:host=localhost;dbname=$base_origin", $usuario_origin, $contraseña_origin);
@@ -235,21 +240,38 @@ while (true) {
                 echo "Error: No se encontraron tablas de origen válidas.\n";
                 continue;
             }
+            // Obtener las columnas únicas de la tabla de destino
+            $unique_columns = [];
+            $result = $pdo_destination->query("SHOW INDEX FROM $base_destination.$tabla_destination WHERE Non_unique = 0");
+            while ($row = $result->fetch(PDO::FETCH_ASSOC)) {
+                if ($row['Column_name'] != 'id') { // Excluir la columna de auto-incremento
+                    $unique_columns[] = $row['Column_name'];
+                }                
+            }
 
+            // Construir la cláusula ON DUPLICATE KEY UPDATE
+            $on_duplicate_key_update = '';
+            if (!empty($unique_columns)) {
+                $updates = [];
+                foreach ($unique_columns as $column) {
+                    $updates[] = "$column = VALUES($column)";
+                }
+                $on_duplicate_key_update = 'ON DUPLICATE KEY UPDATE ' . implode(', ', $updates);
+            }
             // Generar SQL del INSERT
             $insert_sql = "INSERT INTO $base_destination.$tabla_destination (" . implode(", ", $campos_destination) . ") ";
-            $insert_sql .= "SELECT " . implode(", ", $valores) . " FROM " . implode(", ", array_unique($fuentes)) . ";";
+            $insert_sql .= "SELECT " . implode(", ", $valores) . " FROM " . implode(", ", array_unique($fuentes)) .";";
 
             echo "Ejecutando el siguiente SQL:\n$insert_sql\n";
 
             try {
                 // Desactivar las restricciones de claves foráneas
-                $pdo_destination->exec("SET foreign_key_checks = 0;");
+                $pdo_destination->exec("SET foreign_key_checks = 0;");                
                 // Ejecutar el INSERT
                 $pdo_destination->exec($insert_sql);
                 // Restaurar las restricciones de claves foráneas
                 $pdo_destination->exec("SET foreign_key_checks = 1;");
-                echo "Datos insertados exitosamente en la tabla $tabla_destination.\n";
+                echo "Datos insertados exitosamente en la tabla $tabla_destination.\n";                
             } catch (PDOException $e) {
                 echo "Error al ejecutar el INSERT: " . $e->getMessage() . "\n";
             }
