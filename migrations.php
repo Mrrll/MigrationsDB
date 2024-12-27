@@ -130,6 +130,7 @@ while (true) {
         $omitir = obtenerEntradaValida("> ¿Deseas omitir el campo $campo_dest_name? (si/no) [no]: ", ['si', 'no']);
         if ($omitir === 'si') {
             echo "Campo $campo_dest_name omitido.\n";
+            echo "\nSiguiente campo....\n\n";
             continue;
         }
 
@@ -142,6 +143,7 @@ while (true) {
                 'campo_destination' => $campo_dest_name,
                 'valor_manual' => $valor_manual
             ];
+            echo "\nSiguiente campo....\n\n";
             continue;
         }
 
@@ -161,6 +163,57 @@ while (true) {
             'campo' => $campo_fuente,
             'base_datos' => $base_datos
         ];
+
+        // Añadir condición de relación entre campos
+        $relacionar_condicion = obtenerEntradaValida("> ¿Quieres agregar una condición de relación para este campo $campo_dest_name? (si/no): ", ['si', 'no']);
+        if ($relacionar_condicion === 'si') {
+            // Primera parte: Selección del campo de origen (origen.detalle_albaranes.codi_albaranes)
+            echo "\nPara la condición de relación, selecciona el primer campo:\n";
+
+            // 1. Elegir la base de datos para el campo de origen
+            $base_datos_origen = obtenerEntradaValida("> ¿En qué base de datos se encuentra la tabla para el primer campo? ($base_origin/$base_destination): ", [$base_origin, $base_destination]);
+
+            // 2. Obtener tablas de la base de datos seleccionada
+            $tablas_origen = ($base_datos_origen === $base_origin) ? $tablas_origin : $tablas_destination;
+
+            // 3. Elegir la tabla para el campo de origen
+            echo "\nTablas disponibles en $base_datos_origen:\n";
+            $tabla_origen = obtenerEntradaValida("> Selecciona la tabla para el primer campo:\n", array_keys($tablas_origen), true);
+
+            // 4. Obtener los campos de la tabla seleccionada
+            echo "\nCampos disponibles en la tabla $tabla_origen:\n";
+            $campos_origen = array_column($tablas_origen[$tabla_origen], 'Field');
+            $campo_origen = obtenerEntradaValida("> Selecciona el primer campo:\n", $campos_origen, true);
+
+            // Segunda parte: Selección del campo de destino (origen.albaranes.codigo)
+            echo "\nAhora selecciona el segundo campo:\n";
+
+            // 1. Elegir la base de datos para el campo de destino
+            $base_datos_destino = obtenerEntradaValida("> ¿En qué base de datos se encuentra la tabla para el segundo campo? ($base_origin/$base_destination): ", [$base_origin, $base_destination]);
+
+            // 2. Obtener tablas de la base de datos seleccionada
+            $tablas_destino = ($base_datos_destino === $base_origin) ? $tablas_origin : $tablas_destination;
+
+            // 3. Elegir la tabla para el campo de destino
+            echo "\nTablas disponibles en $base_datos_destino:\n";
+            $tabla_destino = obtenerEntradaValida("> Selecciona la tabla para el segundo campo:\n", array_keys($tablas_destino), true);
+
+            // 4. Obtener los campos de la tabla seleccionada
+            echo "\nCampos disponibles en la tabla $tabla_destino:\n";
+            $campos_destino = array_column($tablas_destino[$tabla_destino], 'Field');
+            $campo_destino = obtenerEntradaValida("> Selecciona el segundo campo:\n", $campos_destino, true);
+
+            // Crear la condición de relación
+            $condicion_relacion = "$base_datos_origen.$tabla_origen.$campo_origen = $base_datos_destino.$tabla_destino.$campo_destino";
+
+            // Almacenar la condición de relación
+            $mapeo['condicion_relacion'] = $condicion_relacion;
+
+            // Confirmación de la condición
+            echo "Condición de relación agregada: $condicion_relacion\n";
+        }
+
+        
 
         // Validar y convertir formato de fechas si es necesario
         if (strpos($campo_dest_type, 'timestamp') !== false || strpos($campo_dest_type, 'datetime') !== false) {
@@ -184,14 +237,10 @@ while (true) {
             }
             // Usar los valores convertidos en el SQL
             $valores[] = implode(", ", $valores_convertidos);
-            // // Usar el primer valor convertido como ejemplo para la inserción
-            // if (!empty($valores_convertidos)) {
-            //     $mapeo['valor_convertido'] = $valores_convertidos[0];
-            // }
         } else {
             $valores[] = "{$mapeo['base_datos']}.{$mapeo['tabla']}.{$mapeo['campo']}";
         }
-
+        echo "\nSiguiente campo....\n\n";
         $mapeos[] = $mapeo;
     }
 
@@ -210,8 +259,17 @@ while (true) {
         // Generar y ejecutar el SQL
         $campos_dest = array_column($mapeos, 'campo_destination');
         $valores = [];
+        $fuentes = [];
+        $join_clauses = [];
+        $from_table = reset($mapeos)['tabla']; // Tabla principal para el SELECT
+        $from_base = reset($mapeos)['base_datos']; // Base de datos principal para el SELECT
 
         foreach ($mapeos as $mapeo) {
+            // Si hay una condición de relación, la agregamos al JOIN
+            if (isset($mapeo['condicion_relacion'])) {
+                // Agregar un JOIN con la condición proporcionada
+                $join_clauses[] = "LEFT JOIN {$mapeo['base_datos']}.{$mapeo['tabla']} ON {$mapeo['condicion_relacion']}";
+            }
             if (isset($mapeo['valor_manual'])) {
                 // Valor manual definido por el usuario
                 $valores[] = "'{$mapeo['valor_manual']}'";
@@ -224,15 +282,75 @@ while (true) {
                 // Detectar y convertir fechas usando SQL directamente
                 $campo_euros = "{$mapeo['base_datos']}.{$mapeo['tabla']}.{$mapeo['campo']}";
                 $valores[] = "IF(LOCATE('-', $campo_euros) = 5, $campo_euros, STR_TO_DATE($campo_euros, '%d-%m-%Y,%H:%i:%s'))";
+                
+                // La cadena que deseas buscar
+                $search_string = "{$mapeo['base_datos']}.{$mapeo['tabla']}";
+
+                $found = false;
+
+                foreach ($join_clauses as $clause) {
+                    if (strpos($clause, $search_string) !== false) {
+                        $found = true;
+                        break;
+                    }
+                }
+
+                if (!$found) {                    
+                    $fuentes[] = "{$mapeo['base_datos']}.{$mapeo['tabla']}"; // Añadir la tabla fuente
+                }
+                
             } else {
                 // Para cualquier otro tipo de campo, usar directamente el mapeo
                 $valores[] = "{$mapeo['base_datos']}.{$mapeo['tabla']}.{$mapeo['campo']}";
+                // La cadena que deseas buscar
+                $search_string = "{$mapeo['base_datos']}.{$mapeo['tabla']}";
+
+                $found = false;
+
+                foreach ($join_clauses as $clause) {
+                    if (strpos($clause, $search_string) !== false) {
+                        $found = true;
+                        break;
+                    }
+                }
+
+                if (!$found) {
+                    $fuentes[] = "{$mapeo['base_datos']}.{$mapeo['tabla']}"; // Añadir la tabla fuente
+                }
+            }
+        }
+        if (empty($fuentes)) {
+            echo "\nError: No se encontraron tablas de origen válidas.\n";
+            continue;
+        }
+        // Obtener las columnas únicas de la tabla de destino
+        $unique_columns = [];
+        $result = $pdo_destination->query("SHOW INDEX FROM $base_destination.$tabla_destination WHERE Non_unique = 0");
+        while ($row = $result->fetch(PDO::FETCH_ASSOC)) {
+            if ($row['Column_name'] != 'id') { // Excluir la columna de auto-incremento
+                $unique_columns[] = $row['Column_name'];
             }
         }
 
+        // Construir la cláusula ON DUPLICATE KEY UPDATE
+        $on_duplicate_key_update = '';
+        if (!empty($unique_columns)) {
+            $updates = [];
+            foreach ($unique_columns as $column) {
+                $updates[] = "$column = VALUES($column)";
+            }
+            $on_duplicate_key_update = 'ON DUPLICATE KEY UPDATE ' . implode(', ', $updates);
+        }
+        // Construir el SQL final con los JOINs necesarios
         $insert_sql = "INSERT INTO $base_destination.$tabla_destination (" . implode(", ", $campos_dest) . ") ";
-        $insert_sql .= "SELECT " . implode(", ", $valores) . " FROM $base_origin." . reset($mapeos)['tabla'] . ";";
+        $insert_sql .= "SELECT " . implode(", ", $valores) . " FROM " . implode(", ", array_unique($fuentes)) . " ";
 
+        if (!empty($join_clauses)) {
+            $insert_sql .= implode(" ", $join_clauses);
+        }
+        $insert_sql .= " ".$on_duplicate_key_update.";";
+
+        echo "\nSQL generado:\n$insert_sql\n";
         try {
             $pdo_destination->exec("SET foreign_key_checks = 0;");
             $pdo_destination->exec($insert_sql);
