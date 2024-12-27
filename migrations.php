@@ -12,12 +12,19 @@
 // $usuario_destination = trim(fgets(STDIN));
 // echo "Introduce para la base de datos de destino ($base_destination) la contraseña: ";
 // $contraseña_destination = trim(fgets(STDIN));
+
+// ==========================================
+// CONFIGURACIÓN Y UTILIDADES
+// ==========================================
+
+// Configuración inicial
 $base_origin = "euros";
 $usuario_origin = "root";
 $contraseña_origin = "1234";
 $base_destination = "mybilling";
 $usuario_destination = "root";
 $contraseña_destination = "1234";
+
 // Conexión a las bases de datos
 try {
     $pdo_origin = new PDO("mysql:host=localhost;dbname=$base_origin", $usuario_origin, $contraseña_origin);
@@ -32,8 +39,7 @@ try {
 }
 
 // Función para obtener tablas y campos de una base de datos
-function obtenerTablasYCampos($pdo, $base)
-{
+function obtenerTablasYCampos($pdo, $base) {
     $query = $pdo->query("SHOW TABLES FROM $base");
     $tablas = $query->fetchAll(PDO::FETCH_ASSOC);
 
@@ -54,233 +60,191 @@ function obtenerTablasYCampos($pdo, $base)
     return $tablas_y_campos;
 }
 
-// Obtener tablas y campos
-$tablas_destination = obtenerTablasYCampos($pdo_destination, $base_destination);
-$tablas_origin = obtenerTablasYCampos($pdo_origin, $base_origin);
+// Validación del input del usuario
+function obtenerEntradaValida($prompt, $opciones, $numerar = false) {
+    while (true) {        
+        if ($numerar) {
+            foreach ($opciones as $index => $opcion) {
+                echo "  [" . ($index + 1) . "] $opcion\n";
+            }
+        }
+        echo $prompt;
+        $entrada = trim(fgets(STDIN));
 
-// Mostrar las tablas de destino
-function mostrarTablasDisponibles($tablas)
-{
-    echo "Tablas disponibles en destination:\n";
-    foreach (array_keys($tablas) as $tabla) {
-        echo "  - $tabla\n";
+        if ($numerar && is_numeric($entrada) && isset($opciones[$entrada - 1])) {
+            return $opciones[$entrada - 1];
+        } elseif (in_array($entrada, $opciones)) {
+            return $entrada;
+        } else {
+            echo "Entrada inválida. Por favor, selecciona una opción válida.\n";
+        }
+        
     }
 }
 
-// Iniciar el proceso interactivo
+// Función para convertir fechas al formato adecuado
+function detectarYConvertirFecha($valor)
+{
+    // Formatos de entrada posibles
+    $formatos_entrada = [
+        'd-m-Y H:i:s',
+        'd-m-Y,H:i:s',
+        'd/m/Y H:i:s',
+        'Y-m-d H:i:s',
+        'd-m-Y',
+        'Y-m-d'
+    ];
+
+    // Intentar detectar el formato
+    foreach ($formatos_entrada as $formato) {
+        $fecha = DateTime::createFromFormat($formato, $valor);
+        if ($fecha !== false) {
+            // Retornar la fecha en formato estándar SQL
+            return $fecha->format('Y-m-d H:i:s');
+        }
+    }
+
+    // Si no coincide, retornar un valor predeterminado
+    return null;
+}
+
+// Obtener tablas y campos
+$tablas_origin = obtenerTablasYCampos($pdo_origin, $base_origin);
+$tablas_destination = obtenerTablasYCampos($pdo_destination, $base_destination);
+
+// ==========================================
+// PROCESO INTERACTIVO
+// ==========================================
+
 while (true) {
-    mostrarTablasDisponibles($tablas_destination);
+    echo "\nTablas disponibles en la base de datos destino ($base_destination):\n";
+    $tabla_destination = obtenerEntradaValida("> Selecciona una tabla de destino: $base_destination\n", array_keys($tablas_destination), true);    
+    echo "\nCampos disponibles en la tabla $tabla_destination:\n";
+    $mapeos = [];
 
-    echo "\n¿Qué tabla del destino quieres mapear? (Escribe 'salir' para finalizar): ";
-    $tabla_destination = trim(fgets(STDIN));
+    foreach ($tablas_destination[$tabla_destination] as $campo_dest) {
+        $campo_dest_name = $campo_dest['Field'];
+        $campo_dest_type = $campo_dest['Type'];
 
-    if ($tabla_destination === 'salir') {
-        echo "Proceso finalizado. ¡Hasta luego!\n";
-        break;
-    }
+        // Preguntar si se omite el campo
+        $omitir = obtenerEntradaValida("> ¿Deseas omitir el campo $campo_dest_name? (si/no) [no]: ", ['si', 'no']);
+        if ($omitir === 'si') {
+            echo "Campo $campo_dest_name omitido.\n";
+            continue;
+        }
 
-    if (!array_key_exists($tabla_destination, $tablas_destination)) {
-        echo "La tabla $tabla_destination no existe en la base destino. Intenta de nuevo.\n";
-        continue;
-    }
-
-    echo "Campos disponibles en la tabla $tabla_destination de la base destino:\n";
-    foreach ($tablas_destination[$tabla_destination] as $campo) {
-        echo "  - {$campo['Field']} ({$campo['Type']})\n";
-    }
-
-    $mapeos = []; // Guardará los mapeos para esta tabla
-
-    foreach ($tablas_destination[$tabla_destination] as $campo_destination) {
-        $campo_dest_name = $campo_destination['Field'];
-        $campo_dest_type = $campo_destination['Type'];
-
-        echo "\n¿Quieres establecer manualmente el valor para $campo_dest_name? (si/no): ";
-        $valor_manual = trim(fgets(STDIN));
-
-        if (strtolower($valor_manual) === 'si') {
-            echo "Introduce el valor manual para $campo_dest_name: ";
-            $valor = trim(fgets(STDIN));
+        // Preguntar si se asigna un valor manual
+        $manual = obtenerEntradaValida("> ¿Quieres establecer un valor manual para $campo_dest_name? (si/no): ", ['si', 'no']);
+        if ($manual === 'si') {
+            echo "> Introduce el valor manual para $campo_dest_name: ";
+            $valor_manual = trim(fgets(STDIN));
             $mapeos[] = [
                 'campo_destination' => $campo_dest_name,
-                'valor_manual' => $valor,
+                'valor_manual' => $valor_manual
             ];
-            echo "Valor manual establecido: $campo_dest_name ← '$valor'.\n";
             continue;
         }
 
-        echo "¿En qué base de datos quieres buscar el dato para $campo_dest_name? ($base_origin/$base_destination): ";
-        $base_datos = trim(fgets(STDIN));
+        // Seleccionar base de datos y tabla fuente
+        $base_datos = obtenerEntradaValida("> ¿En qué base de datos se encuentra el dato para $campo_dest_name? ($base_origin/$base_destination): ", [$base_origin, $base_destination]);
+        $tablas_fuente = ($base_datos === $base_origin) ? $tablas_origin : $tablas_destination;
 
-        if ($base_datos !== $base_origin && $base_datos !== $base_destination) {
-            echo "Base de datos no válida. Campo $campo_dest_name omitido.\n";
-            continue;
-        }
+        echo "\nTablas disponibles en $base_datos:\n";
+        $tabla_fuente = obtenerEntradaValida("> Selecciona la tabla fuente para $campo_dest_name:\n", array_keys($tablas_fuente), true);
 
-        $tablas = ($base_datos === $base_origin) ? $tablas_origin : $tablas_destination;
-        echo "Tablas disponibles en $base_datos:\n";
-        foreach (array_keys($tablas) as $tabla) {
-            echo "  - $tabla\n";
-        }
-
-        echo "\n¿En qué tabla de $base_datos se encuentra el dato para $campo_dest_name? (Presiona 'Enter' para omitir este campo): ";
-        $tabla = trim(fgets(STDIN));
-
-        if ($tabla === '') {
-            echo "Campo $campo_dest_name omitido.\n";
-            continue;
-        }
-
-        if (!array_key_exists($tabla, $tablas)) {
-            echo "La tabla $tabla no existe en $base_datos. Intenta de nuevo.\n";
-            continue;
-        }
-
-        echo "Campos disponibles en la tabla $tabla de $base_datos:\n";
-        foreach ($tablas[$tabla] as $campo) {
-            echo "  - {$campo['Field']}\n";
-        }
-
-        echo "\n¿Qué campo de $tabla quieres usar como fuente para $campo_dest_name? (Presiona 'Enter' para omitir este campo): ";
-        $campo = trim(fgets(STDIN));
-
-        if ($campo === '') {
-            echo "Campo $campo_dest_name omitido.\n";
-            continue;
-        }
+        echo "\nCampos disponibles en la tabla $tabla_fuente:\n";
+        $campo_fuente = obtenerEntradaValida("> Selecciona el campo fuente para $campo_dest_name:\n", array_column($tablas_fuente[$tabla_fuente], 'Field'), true);
 
         $mapeo = [
             'campo_destination' => $campo_dest_name,
-            'tabla' => $tabla,
-            'campo' => $campo,
-            'base_datos' => $base_datos,
+            'tabla' => $tabla_fuente,
+            'campo' => $campo_fuente,
+            'base_datos' => $base_datos
         ];
 
+        // Validar y convertir formato de fechas si es necesario
         if (strpos($campo_dest_type, 'timestamp') !== false || strpos($campo_dest_type, 'datetime') !== false) {
             echo "El campo $campo_dest_name es de tipo TIMESTAMP o DATETIME. Verificando formato y convirtiendo si es necesario.\n";
 
-            // Recuperar valores del campo fuente para analizar formato
-            $query = $pdo_origin->prepare("SELECT `$campo` FROM `$tabla`");
+            // Recuperar valores del campo fuente
+            $query = $pdo_origin->prepare("SELECT `$campo_fuente` FROM `$tabla_fuente`");
             $query->execute();
             $valores_origen = $query->fetchAll(PDO::FETCH_COLUMN);
 
             $valores_convertidos = [];
             foreach ($valores_origen as $valor_origen) {
-                // Intentar convertir el formato de fecha
-                $fecha = DateTime::createFromFormat('d-m-Y,H:i:s', $valor_origen); // Formato original con coma
-                if (!$fecha) {
-                    // Si no funciona con la coma, probar con el formato sin coma
-                    $valor_origen = str_replace(' ', ',', $valor_origen);  // Reemplazar espacios por coma si no está presente
-                    $fecha = DateTime::createFromFormat('d-m-Y,H:i:s', $valor_origen);
-                }
-
-                if (!$fecha) {
-                    $fecha = DateTime::createFromFormat('d-m-Y H:i:s', $valor_origen); // Formato sin coma
-                }
-
-                if ($fecha) {
-                    $valores_convertidos[] = $fecha->format('Y-m-d H:i:s');
+                // Intentar convertir el formato de fecha en PHP
+                $fecha_convertida = detectarYConvertirFecha($valor_origen);
+                if ($fecha_convertida === null) {
+                    echo "Advertencia: No se pudo convertir la fecha '$valor_origen'. Usando NULL.\n";
+                    $valores_convertidos[] = 'NULL';
                 } else {
-                    $valores_convertidos[] = '0000-00-00 00:00:00'; // Valor predeterminado en caso de error.
+                    $valores_convertidos[] = "'$fecha_convertida'";
                 }
             }
-
-            // Agregar los valores convertidos al mapeo
-            $mapeo['valores_convertidos'] = $valores_convertidos;
+            // Usar los valores convertidos en el SQL
+            $valores[] = implode(", ", $valores_convertidos);
+            // // Usar el primer valor convertido como ejemplo para la inserción
+            // if (!empty($valores_convertidos)) {
+            //     $mapeo['valor_convertido'] = $valores_convertidos[0];
+            // }
+        } else {
+            $valores[] = "{$mapeo['base_datos']}.{$mapeo['tabla']}.{$mapeo['campo']}";
         }
 
         $mapeos[] = $mapeo;
-        echo "Mapeo establecido: $tabla_destination.$campo_dest_name ← $base_datos.$tabla.$campo\n";
     }
 
-    // Si hay mapeos, generar el INSERT
-    if (!empty($mapeos)) {
-        echo "\n¿Quieres generar el INSERT para la tabla $tabla_destination ahora? (si/no): ";
-        $respuesta = trim(fgets(STDIN));
-
-        if (strtolower($respuesta) === 'si') {
-            $campos_destination = [];
-            $valores = [];
-            $fuentes = [];
-
-            foreach ($mapeos as $mapeo) {
-                $campos_destination[] = $mapeo['campo_destination'];
-
-                if (isset($mapeo['valor_manual'])) {
-                    // Caso 1: Valor manual proporcionado por el usuario
-                    $valores[] = "'{$mapeo['valor_manual']}'";
-                } elseif (
-                    isset($mapeo['valores_convertidos']) &&
-                    isset($mapeo['base_datos']) &&
-                    isset($mapeo['tabla']) &&
-                    isset($mapeo['campo'])
-                ) {
-                    // Caso 2: Campo de tipo DATETIME/TIMESTAMP con conversión
-                    $valores[] = "'{$mapeo['valores_convertidos'][0]}'"; // Usar el primer valor convertido
-                    $fuentes[] = "{$mapeo['base_datos']}.{$mapeo['tabla']}";
-
-                    // Depuración para mostrar la consulta SQL generada
-                    echo "SQL generado para $campo_dest_name: '{$mapeo['valores_convertidos'][0]}'\n";
-                } elseif (
-                    isset($mapeo['base_datos']) &&
-                    isset($mapeo['tabla']) &&
-                    isset($mapeo['campo'])
-                ) {
-                    // Caso 3: Campo directo
-                    $valores[] = "{$mapeo['base_datos']}.{$mapeo['tabla']}.{$mapeo['campo']}";
-                    $fuentes[] = "{$mapeo['base_datos']}.{$mapeo['tabla']}";
-                } else {
-                    // Caso 4: Campo no definido, usar fecha predeterminada
-                    $valores[] = "'0000-00-00 00:00:00'";
-                    echo "Advertencia: El campo {$mapeo['campo_destination']} no tiene una fuente definida. Se usará un valor predeterminado.\n";
-                }
-            }
-
-            if (empty($fuentes)) {
-                echo "Error: No se encontraron tablas de origen válidas.\n";
-                continue;
-            }
-            // Obtener las columnas únicas de la tabla de destino
-            $unique_columns = [];
-            $result = $pdo_destination->query("SHOW INDEX FROM $base_destination.$tabla_destination WHERE Non_unique = 0");
-            while ($row = $result->fetch(PDO::FETCH_ASSOC)) {
-                if ($row['Column_name'] != 'id') { // Excluir la columna de auto-incremento
-                    $unique_columns[] = $row['Column_name'];
-                }                
-            }
-
-            // Construir la cláusula ON DUPLICATE KEY UPDATE
-            $on_duplicate_key_update = '';
-            if (!empty($unique_columns)) {
-                $updates = [];
-                foreach ($unique_columns as $column) {
-                    $updates[] = "$column = VALUES($column)";
-                }
-                $on_duplicate_key_update = 'ON DUPLICATE KEY UPDATE ' . implode(', ', $updates);
-            }
-            // Generar SQL del INSERT
-            $insert_sql = "INSERT INTO $base_destination.$tabla_destination (" . implode(", ", $campos_destination) . ") ";
-            $insert_sql .= "SELECT " . implode(", ", $valores) . " FROM " . implode(", ", array_unique($fuentes)) .";";
-
-            echo "Ejecutando el siguiente SQL:\n$insert_sql\n";
-
-            try {
-                // Desactivar las restricciones de claves foráneas
-                $pdo_destination->exec("SET foreign_key_checks = 0;");                
-                // Ejecutar el INSERT
-                $pdo_destination->exec($insert_sql);
-                // Restaurar las restricciones de claves foráneas
-                $pdo_destination->exec("SET foreign_key_checks = 1;");
-                echo "Datos insertados exitosamente en la tabla $tabla_destination.\n";                
-            } catch (PDOException $e) {
-                echo "Error al ejecutar el INSERT: " . $e->getMessage() . "\n";
-            }
+    // Confirmar ejecución del INSERT
+    echo "\nResumen de mapeos para la tabla $tabla_destination:\n";
+    foreach ($mapeos as $mapeo) {
+        if (isset($mapeo['valor_manual'])) {
+            echo "  - {$mapeo['campo_destination']} ← Valor manual: {$mapeo['valor_manual']}\n";
+        } else {
+            echo "  - {$mapeo['campo_destination']} ← {$mapeo['base_datos']}.{$mapeo['tabla']}.{$mapeo['campo']}\n";
         }
     }
-    echo "\n¿Quieres continuar con otra tabla? (si/no): ";
-    $continuar = trim(fgets(STDIN));
 
-    if (strtolower($continuar) !== 'si') {
+    $confirmar = obtenerEntradaValida("> ¿Deseas ejecutar el INSERT para $tabla_destination? (si/no): ", ['si', 'no']);
+    if ($confirmar === 'si') {
+        // Generar y ejecutar el SQL
+        $campos_dest = array_column($mapeos, 'campo_destination');
+        $valores = [];
+
+        foreach ($mapeos as $mapeo) {
+            if (isset($mapeo['valor_manual'])) {
+                // Valor manual definido por el usuario
+                $valores[] = "'{$mapeo['valor_manual']}'";
+            } elseif (
+                strpos($mapeo['campo_destination'], 'date') !== false ||
+                strpos($mapeo['campo_destination'], 'time') !== false ||
+                strpos($mapeo['campo_destination'], 'created_at') !== false ||
+                strpos($mapeo['campo_destination'], 'updated_at') !== false
+            ) {
+                // Detectar y convertir fechas usando SQL directamente
+                $campo_euros = "{$mapeo['base_datos']}.{$mapeo['tabla']}.{$mapeo['campo']}";
+                $valores[] = "IF(LOCATE('-', $campo_euros) = 5, $campo_euros, STR_TO_DATE($campo_euros, '%d-%m-%Y,%H:%i:%s'))";
+            } else {
+                // Para cualquier otro tipo de campo, usar directamente el mapeo
+                $valores[] = "{$mapeo['base_datos']}.{$mapeo['tabla']}.{$mapeo['campo']}";
+            }
+        }
+
+        $insert_sql = "INSERT INTO $base_destination.$tabla_destination (" . implode(", ", $campos_dest) . ") ";
+        $insert_sql .= "SELECT " . implode(", ", $valores) . " FROM $base_origin." . reset($mapeos)['tabla'] . ";";
+
+        try {
+            $pdo_destination->exec("SET foreign_key_checks = 0;");
+            $pdo_destination->exec($insert_sql);
+            $pdo_destination->exec("SET foreign_key_checks = 1;");
+            echo "\nDatos insertados exitosamente en $tabla_destination.\n";
+        } catch (PDOException $e) {
+            echo "\nError al ejecutar el INSERT: " . $e->getMessage() . "\n";
+        }
+    }
+
+    $continuar = obtenerEntradaValida("> ¿Deseas procesar otra tabla? (si/no): ", ['si', 'no']);
+    if ($continuar !== 'si') {
         echo "Proceso finalizado. ¡Hasta luego!\n";
         break;
     }
