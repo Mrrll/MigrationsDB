@@ -116,13 +116,14 @@ $tablas_destination = obtenerTablasYCampos($pdo_destination, $base_destination);
 // PROCESO INTERACTIVO
 // ==========================================
 while (true) {
-    echo "\nProceso para transformar valores base de datos de origen ($base_origin):\n";
+    echo "\nProceso para transformar valores en la base de datos de origen ($base_origin):\n";
     $transformar = obtenerEntradaValida("> ¿Quieres transformar los valores de algún campo en la base de datos de origen ($base_origin)? (si/no): ", ['si', 'no']);
     if ($transformar !== 'si') {
         break;
-    }   
+    }
+
     echo "\nTablas disponibles en la base de datos de origen ($base_origin):\n";
-    $tabla_origin = obtenerEntradaValida("> Selecciona una tabla de origen: $base_origin\n", array_keys($tablas_origin),true);
+    $tabla_origin = obtenerEntradaValida("> Selecciona una tabla de origen: $base_origin\n", array_keys($tablas_origin), true);
 
     echo "\nCampos disponibles en la tabla $tabla_origin:\n";
     $campos_origin = array_column($tablas_origin[$tabla_origin], 'Field');
@@ -131,43 +132,43 @@ while (true) {
     $campo_origin = obtenerEntradaValida("> Selecciona el campo que deseas actualizar:\n", $campos_origin, true);
 
     // Pedir el nuevo valor para el campo
-    echo "> Introduce el nuevo valor para $campo_origin: ";
+    echo "> Introduce el nuevo valor para $campo_origin (escribe 'NULL' para valores nulos): ";
     $nuevo_valor = trim(fgets(STDIN));
+    $nuevo_valor = strtoupper($nuevo_valor) === 'NULL' ? null : $nuevo_valor;
 
     // Pedir la condición del WHERE
-    echo "> Introduce la condición el valor del WHERE $campo_origin='': ";
+    echo "> Introduce el valor de la condición WHERE ($campo_origin =): ";
     $condicion_where = trim(fgets(STDIN));
-    // Suponiendo que $nuevo_valor es la variable que deseas validar
-    $nuevo_valor = strtoupper($nuevo_valor) === 'NULL' ? 'NULL' : "'$nuevo_valor'";
 
-    // Imprimir el valor para depuración
-    echo "\n $nuevo_valor\n";
-    // Generar la sentencia SQL UPDATE
-    $update_sql = "UPDATE $base_origin.$tabla_origin SET $campo_origin = $nuevo_valor WHERE $campo_origin = '$condicion_where';";
+    // Generar la sentencia SQL UPDATE usando sentencias preparadas
+    $update_sql = "UPDATE $base_origin.$tabla_origin SET $campo_origin = :nuevo_valor WHERE $campo_origin = :condicion_where";
 
-    // Mostrar el SQL generado
+    // Mostrar el SQL generado para depuración
     echo "\nSQL generado:\n$update_sql\n";
 
-    $confirmar = obtenerEntradaValida("> ¿Deseas ejecutar el UPDATE para la tabla $tabla_origin? (si/no): ", ['si',
-        'no'
-    ]);
+    $confirmar = obtenerEntradaValida("> ¿Deseas ejecutar el UPDATE para la tabla $tabla_origin? (si/no): ", ['si', 'no']);
 
     if ($confirmar === 'si') {
         try {
-            $pdo_origin->exec($update_sql);
-            echo "\nDatos actualizados exitosamente en $tabla_origin.\n";
+            $stmt = $pdo_origin->prepare($update_sql);
+            $stmt->execute([
+                ':nuevo_valor' => $nuevo_valor,
+                ':condicion_where' => $condicion_where,
+            ]);
+            $affected_rows = $stmt->rowCount();
+            echo "\nDatos actualizados exitosamente en $tabla_origin. Registros afectados: $affected_rows\n\n";
         } catch (PDOException $e) {
             echo "\nError al ejecutar el UPDATE: " . $e->getMessage() . "\n";
         }
     }
 
     $continuar = obtenerEntradaValida("> ¿Deseas realizar otra operación? (si/no): ", ['si', 'no']);
-    if ($continuar !== 'si'
-    ) {
+    if ($continuar !== 'si') {
         echo "Proceso finalizado. ¡Hasta luego!\n";
         break;
     }
 }
+// PROCESO INTERACTIVO PARA MIGRAR DATOS
 while (true) {
     echo "\nProceso para migrar de la base de datos de origen ($base_origin) a la base de datos de destino ($base_destination) a :\n";
     echo "\nTablas disponibles en la base de datos destino ($base_destination):\n";
