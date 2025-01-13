@@ -115,8 +115,61 @@ $tablas_destination = obtenerTablasYCampos($pdo_destination, $base_destination);
 // ==========================================
 // PROCESO INTERACTIVO
 // ==========================================
-
 while (true) {
+    echo "\nProceso para transformar valores base de datos de origen ($base_origin):\n";
+    $transformar = obtenerEntradaValida("> ¿Quieres transformar los valores de algún campo en la base de datos de origen ($base_origin)? (si/no): ", ['si', 'no']);
+    if ($transformar !== 'si') {
+        break;
+    }   
+    echo "\nTablas disponibles en la base de datos de origen ($base_origin):\n";
+    $tabla_origin = obtenerEntradaValida("> Selecciona una tabla de origen: $base_origin\n", array_keys($tablas_origin),true);
+
+    echo "\nCampos disponibles en la tabla $tabla_origin:\n";
+    $campos_origin = array_column($tablas_origin[$tabla_origin], 'Field');
+
+    // Seleccionar el campo a actualizar
+    $campo_origin = obtenerEntradaValida("> Selecciona el campo que deseas actualizar:\n", $campos_origin, true);
+
+    // Pedir el nuevo valor para el campo
+    echo "> Introduce el nuevo valor para $campo_origin: ";
+    $nuevo_valor = trim(fgets(STDIN));
+
+    // Pedir la condición del WHERE
+    echo "> Introduce la condición el valor del WHERE $campo_origin='': ";
+    $condicion_where = trim(fgets(STDIN));
+    // Suponiendo que $nuevo_valor es la variable que deseas validar
+    $nuevo_valor = strtoupper($nuevo_valor) === 'NULL' ? 'NULL' : "'$nuevo_valor'";
+
+    // Imprimir el valor para depuración
+    echo "\n $nuevo_valor\n";
+    // Generar la sentencia SQL UPDATE
+    $update_sql = "UPDATE $base_origin.$tabla_origin SET $campo_origin = $nuevo_valor WHERE $campo_origin = '$condicion_where';";
+
+    // Mostrar el SQL generado
+    echo "\nSQL generado:\n$update_sql\n";
+
+    $confirmar = obtenerEntradaValida("> ¿Deseas ejecutar el UPDATE para la tabla $tabla_origin? (si/no): ", ['si',
+        'no'
+    ]);
+
+    if ($confirmar === 'si') {
+        try {
+            $pdo_origin->exec($update_sql);
+            echo "\nDatos actualizados exitosamente en $tabla_origin.\n";
+        } catch (PDOException $e) {
+            echo "\nError al ejecutar el UPDATE: " . $e->getMessage() . "\n";
+        }
+    }
+
+    $continuar = obtenerEntradaValida("> ¿Deseas realizar otra operación? (si/no): ", ['si', 'no']);
+    if ($continuar !== 'si'
+    ) {
+        echo "Proceso finalizado. ¡Hasta luego!\n";
+        break;
+    }
+}
+while (true) {
+    echo "\nProceso para migrar de la base de datos de origen ($base_origin) a la base de datos de destino ($base_destination) a :\n";
     echo "\nTablas disponibles en la base de datos destino ($base_destination):\n";
     $tabla_destination = obtenerEntradaValida("> Selecciona una tabla de destino: $base_destination\n", array_keys($tablas_destination), true);    
     echo "\nCampos disponibles en la tabla $tabla_destination:\n";
@@ -254,8 +307,8 @@ while (true) {
         }
     }
 
-    $confirmar = obtenerEntradaValida("> ¿Deseas ejecutar el INSERT para $tabla_destination? (si/no): ", ['si', 'no']);
-    if ($confirmar === 'si') {
+    $validar = obtenerEntradaValida("> ¿Deseas ver la sentencia para $tabla_destination? (si/no): ", ['si', 'no']);
+    if ($validar === 'si') {
         // Generar y ejecutar el SQL
         $campos_dest = array_column($mapeos, 'campo_destination');
         $valores = [];
@@ -342,7 +395,7 @@ while (true) {
             $on_duplicate_key_update = 'ON DUPLICATE KEY UPDATE ' . implode(', ', $updates);
         }
         // Construir el SQL final con los JOINs necesarios
-        $insert_sql = "INSERT INTO $base_destination.$tabla_destination (" . implode(", ", $campos_dest) . ") ";
+        $insert_sql = "INSERT IGNORE INTO $base_destination.$tabla_destination (" . implode(", ", $campos_dest) . ") ";
         $insert_sql .= "SELECT " . implode(", ", $valores) . " FROM " . implode(", ", array_unique($fuentes)) . " ";
 
         if (!empty($join_clauses)) {
@@ -350,7 +403,10 @@ while (true) {
         }
         $insert_sql .= " ".$on_duplicate_key_update.";";
 
-        echo "\nSQL generado:\n$insert_sql\n";
+        echo "\nSQL generado:\n$insert_sql\n";        
+    }
+    $confirmar = obtenerEntradaValida("> ¿Deseas ejecutar el INSERT para $tabla_destination? (si/no): ", ['si', 'no']);
+    if ($confirmar === 'si') {
         try {
             $pdo_destination->exec("SET foreign_key_checks = 0;");
             $pdo_destination->exec($insert_sql);
