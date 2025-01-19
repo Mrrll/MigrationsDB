@@ -170,6 +170,8 @@ function transformarValores($base_origin, $tablas_origin, $pdo_origin) {
 
 function migrarDatos($base_origin, $base_destination, $tablas_origin, $tablas_destination, $pdo_origin, $pdo_destination) {
     $sentencias_sql = [];
+    $campos_adicionales = [];
+    $ejecutar_sentencias = false;
 
     while (true) {
         echo "\nProceso para migrar de la base de datos de origen ($base_origin) a la base de datos de destino ($base_destination):\n";
@@ -182,6 +184,23 @@ function migrarDatos($base_origin, $base_destination, $tablas_origin, $tablas_de
             if ($confirmar_tabla === 'si') {
                 break;
             }
+        }
+
+        $añadir_campo = obtenerEntradaValida("> ¿Quieres añadir un campo adicional a la tabla $tabla_destination? (si/no): ", ['si', 'no']);
+        if ($añadir_campo === 'si') {
+            echo "> Introduce el nombre del campo adicional: ";
+            $nombre_campo_adicional = trim(fgets(STDIN));
+            echo "> Introduce el tipo del campo adicional: ";
+            $tipo_campo_adicional = trim(fgets(STDIN));
+
+            $alter_sql = "ALTER TABLE $base_destination.$tabla_destination ADD $nombre_campo_adicional $tipo_campo_adicional;";
+            $sentencias_sql[] = $alter_sql;
+            $campos_adicionales[] = [
+                'tabla' => $tabla_destination,
+                'campo' => $nombre_campo_adicional
+            ];
+
+            echo "\nSQL generado para añadir el campo:\n$alter_sql\n";
         }
 
         echo "\nCampos disponibles en la tabla $tabla_destination:\n";
@@ -206,6 +225,49 @@ function migrarDatos($base_origin, $base_destination, $tablas_origin, $tablas_de
                     'campo_destination' => $campo_dest_name,
                     'valor_manual' => $valor_manual
                 ];
+
+                $concatenar = obtenerEntradaValida("> ¿Quieres concatenar un valor a este campo $campo_dest_name? (si/no): ", ['si', 'no']);
+                if ($concatenar === 'si') {
+                    echo "> Introduce el valor a concatenar: ";
+                    $valor_concatenar = trim(fgets(STDIN));
+                    $mapeos[count($mapeos) - 1]['valor_concatenar'] = $valor_concatenar;
+                }
+
+                $relacionar_condicion = obtenerEntradaValida("> ¿Quieres agregar una condición de relación para este campo $campo_dest_name? (si/no): ", ['si', 'no']);
+                if ($relacionar_condicion === 'si') {
+                    echo "\nPara la condición de relación, selecciona el primer campo:\n";
+
+                    $base_datos_origen = obtenerEntradaValida("> ¿En qué base de datos se encuentra la tabla para el primer campo? ($base_origin/$base_destination): ", [$base_origin, $base_destination]);
+
+                    $tablas_origen = ($base_datos_origen === $base_origin) ? $tablas_origin : $tablas_destination;
+
+                    echo "\nTablas disponibles en $base_datos_origen:\n";
+                    $tabla_origen = obtenerEntradaValida("> Selecciona la tabla para el primer campo:\n", array_keys($tablas_origen), true);
+
+                    echo "\nCampos disponibles en la tabla $tabla_origen:\n";
+                    $campos_origen = array_column($tablas_origen[$tabla_origen], 'Field');
+                    $campo_origen = obtenerEntradaValida("> Selecciona el primer campo:\n", $campos_origen, true);
+
+                    echo "\nAhora selecciona el segundo campo:\n";
+
+                    $base_datos_destino = obtenerEntradaValida("> ¿En qué base de datos se encuentra la tabla para el segundo campo? ($base_origin/$base_destination): ", [$base_origin, $base_destination]);
+
+                    $tablas_destino = ($base_datos_destino === $base_origin) ? $tablas_origin : $tablas_destination;
+
+                    echo "\nTablas disponibles en $base_datos_destino:\n";
+                    $tabla_destino = obtenerEntradaValida("> Selecciona la tabla para el segundo campo:\n", array_keys($tablas_destino), true);
+
+                    echo "\nCampos disponibles en la tabla $tabla_destino:\n";
+                    $campos_destino = array_column($tablas_destino[$tabla_destino], 'Field');
+                    $campo_destino = obtenerEntradaValida("> Selecciona el segundo campo:\n", $campos_destino, true);
+
+                    $condicion_relacion = "$base_datos_origen.$tabla_origen.$campo_origen = $base_datos_destino.$tabla_destino.$campo_destino";
+
+                    $mapeo['condicion_relacion'] = $condicion_relacion;
+
+                    echo "Condición de relación agregada: $condicion_relacion\n";
+                }
+
                 echo "\nSiguiente campo....\n\n";
                 continue;
             }
@@ -247,6 +309,13 @@ function migrarDatos($base_origin, $base_destination, $tablas_origin, $tablas_de
                 'campo' => $campo_fuente,
                 'base_datos' => $base_datos
             ];
+
+            $concatenar = obtenerEntradaValida("> ¿Quieres concatenar un valor a este campo $campo_dest_name? (si/no): ", ['si', 'no']);
+            if ($concatenar === 'si') {
+                echo "> Introduce el valor a concatenar: ";
+                $valor_concatenar = trim(fgets(STDIN));
+                $mapeo['valor_concatenar'] = $valor_concatenar;
+            }
 
             $relacionar_condicion = obtenerEntradaValida("> ¿Quieres agregar una condición de relación para este campo $campo_dest_name? (si/no): ", ['si', 'no']);
             if ($relacionar_condicion === 'si') {
@@ -312,6 +381,8 @@ function migrarDatos($base_origin, $base_destination, $tablas_origin, $tablas_de
         foreach ($mapeos as $mapeo) {
             if (isset($mapeo['valor_manual'])) {
                 echo "  - {$mapeo['campo_destination']} ← Valor manual: {$mapeo['valor_manual']}\n";
+            } elseif (isset($mapeo['valor_concatenar'])) {
+                echo "  - {$mapeo['campo_destination']} ← CONCAT({$mapeo['campo_destination']}, '{$mapeo['valor_concatenar']}')\n";
             } else {
                 echo "  - {$mapeo['campo_destination']} ← {$mapeo['base_datos']}.{$mapeo['tabla']}.{$mapeo['campo']}\n";
             }
@@ -330,6 +401,8 @@ function migrarDatos($base_origin, $base_destination, $tablas_origin, $tablas_de
                 }
                 if (isset($mapeo['valor_manual'])) {
                     $valores[] = "'{$mapeo['valor_manual']}'";
+                } elseif (isset($mapeo['valor_concatenar'])) {
+                    $valores[] = "CONCAT({$mapeo['base_datos']}.{$mapeo['tabla']}.{$mapeo['campo']}, '{$mapeo['valor_concatenar']}')";
                 } elseif (
                     strpos($mapeo['campo_destination'], 'date') !== false ||
                     strpos($mapeo['campo_destination'], 'time') !== false ||
@@ -426,8 +499,24 @@ function migrarDatos($base_origin, $base_destination, $tablas_origin, $tablas_de
             }
             $pdo_destination->exec("SET foreign_key_checks = 1;");
             echo "\nDatos insertados exitosamente.\n";
+            $ejecutar_sentencias = true;
         } catch (PDOException $e) {
             echo "\nError al ejecutar las sentencias SQL: " . $e->getMessage() . "\n";
+        }
+    }
+
+    if ($ejecutar_sentencias) {
+        foreach ($campos_adicionales as $campo) {
+            $borrar_campo = obtenerEntradaValida("> ¿Deseas borrar el campo adicional {$campo['campo']} de la tabla {$campo['tabla']}? (si/no): ", ['si', 'no']);
+            if ($borrar_campo === 'si') {
+                $drop_sql = "ALTER TABLE $base_destination.{$campo['tabla']} DROP COLUMN {$campo['campo']};";
+                try {
+                    $pdo_destination->exec($drop_sql);
+                    echo "\nCampo {$campo['campo']} borrado exitosamente de la tabla {$campo['tabla']}.\n";
+                } catch (PDOException $e) {
+                    echo "\nError al borrar el campo {$campo['campo']} de la tabla {$campo['tabla']}: " . $e->getMessage() . "\n";
+                }
+            }
         }
     }
 
