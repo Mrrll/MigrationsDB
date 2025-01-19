@@ -169,8 +169,10 @@ function transformarValores($base_origin, $tablas_origin, $pdo_origin) {
 }
 
 function migrarDatos($base_origin, $base_destination, $tablas_origin, $tablas_destination, $pdo_origin, $pdo_destination) {
+    $sentencias_sql = [];
+
     while (true) {
-        echo "\nProceso para migrar de la base de datos de origen ($base_origin) a la base de datos de destino ($base_destination) a :\n";
+        echo "\nProceso para migrar de la base de datos de origen ($base_origin) a la base de datos de destino ($base_destination):\n";
         echo "\nTablas disponibles en la base de datos destino ($base_destination):\n";
 
         while (true) {
@@ -321,8 +323,6 @@ function migrarDatos($base_origin, $base_destination, $tablas_origin, $tablas_de
             $valores = [];
             $fuentes = [];
             $join_clauses = [];
-            $from_table = reset($mapeos)['tabla'];
-            $from_base = reset($mapeos)['base_datos'];
 
             foreach ($mapeos as $mapeo) {
                 if (isset($mapeo['condicion_relacion'])) {
@@ -403,24 +403,35 @@ function migrarDatos($base_origin, $base_destination, $tablas_origin, $tablas_de
 
             echo "\nSQL generado:\n$insert_sql\n";
         }
-        $confirmar = obtenerEntradaValida("> ¿Deseas ejecutar el INSERT para $tabla_destination? (si/no): ", ['si', 'no']);
-        if ($confirmar === 'si') {
-            try {
-                $pdo_destination->exec("SET foreign_key_checks = 0;");
-                $pdo_destination->exec($insert_sql);
-                $pdo_destination->exec("SET foreign_key_checks = 1;");
-                echo "\nDatos insertados exitosamente en $tabla_destination.\n";
-            } catch (PDOException $e) {
-                echo "\nError al ejecutar el INSERT: " . $e->getMessage() . "\n";
-            }
-        }
 
-        $continuar = obtenerEntradaValida("> ¿Deseas procesar otra tabla? (si/no): ", ['si', 'no']);
-        if ($continuar !== 'si') {
-            echo "Proceso finalizado. ¡Hasta luego!\n";
+        $sentencias_sql[] = $insert_sql;
+
+        $anidar = obtenerEntradaValida("> ¿Deseas anidar otra sentencia SQL antes de ejecutar? (si/no): ", ['si', 'no']);
+        if ($anidar === 'no') {
             break;
         }
     }
+
+    echo "\nSentencias SQL generadas:\n";
+    foreach ($sentencias_sql as $sql) {
+        echo "$sql\n";
+    }
+
+    $confirmar = obtenerEntradaValida("> ¿Deseas ejecutar las sentencias SQL generadas? (si/no): ", ['si', 'no']);
+    if ($confirmar === 'si') {
+        try {
+            $pdo_destination->exec("SET foreign_key_checks = 0;");
+            foreach ($sentencias_sql as $sql) {
+                $pdo_destination->exec($sql);
+            }
+            $pdo_destination->exec("SET foreign_key_checks = 1;");
+            echo "\nDatos insertados exitosamente.\n";
+        } catch (PDOException $e) {
+            echo "\nError al ejecutar las sentencias SQL: " . $e->getMessage() . "\n";
+        }
+    }
+
+    echo "Proceso finalizado. ¡Hasta luego!\n";
 }
 
 transformarValores($base_origin, $tablas_origin, $pdo_origin);
