@@ -12,5 +12,9 @@ require_once 'functions/obtenerTablasYCampos.php';
 require_once 'functions/mostrarCampos.php';
 require_once 'functions/obtenerEntradaValida.php';
 require_once 'functions/detectarYConvertirFecha.php';
+require_once 'functions/seleccionarTabla.php';
+require_once 'functions/seleccionarCampo.php';
+require_once 'functions/transformarCampo.php';
+require_once 'functions/actualizarCampo.php';
 
 
