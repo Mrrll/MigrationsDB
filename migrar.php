@@ -59,7 +59,7 @@ function migrarDatos($base_origin, $base_destination, $tablas_origin, $tablas_de
         }
     }
     if ($continuar === 'no') {
-        echo "Proceso cancelado. ¡Hasta luego!\n";
+        echo "\nProceso de migración finalizado.\n";
         return;
     }
     // Mostrar sentencias SQL generadas
