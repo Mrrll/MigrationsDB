@@ -5,8 +5,8 @@ require_once "funciones.php";
 // ==========================================
 function actualizarValores($base, $tablas, $pdo)  {    
     while (true) {
-        echo "\nProceso para actualizar valores en la base de datos de origen ($base):\n";
-        $actualizar = obtenerEntradaValida("> ¿Estas seguro que quieres actualizar los valores de algún campo en la base de datos de origen ($base)? (si/no): ", ['si', 'no']);
+        echo "\nProceso para actualizar valores en la base de datos ($base):\n";
+        $actualizar = obtenerEntradaValida("> ¿Estas seguro que quieres actualizar los valores de algún campo en la base de datos ($base)? (si/no): ", ['si', 'no']);
         if ($actualizar !== 'si') {
             echo "\nProceso de actualización finalizado.\n";
             break;
@@ -15,7 +15,7 @@ function actualizarValores($base, $tablas, $pdo)  {
         $tabla = seleccionarTabla($base, $tablas, $pdo);
         $campo = seleccionarCampo($tabla, $tablas);
     
-        actualizarCampo($base, $tabla, $campo, $pdo);
+        actualizarCampo($base, $tabla, $campo, $pdo, $tablas);
     
         $continuar = obtenerEntradaValida("> ¿Deseas realizar otra operación? (si/no): ", ['si', 'no']);
         if ($continuar !== 'si') {
