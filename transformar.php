@@ -4,9 +4,9 @@ require_once "funciones.php";
 // PROCESO INTERACTIVO
 // ==========================================
 function transformarValores($base_origin, $tablas_origin, $pdo_origin)
-{
+{    
     while (true) {
-        echo "\nProceso para transformar valores en la base de datos de origen ($base_origin):\n";
+        echo "\nBienvenido al proceso de transformar valores en la base de datos de origen ($base_origin):\n";
         $transformar = obtenerEntradaValida("> ¿Estas seguro que quieres transformar los valores de algún campo en la base de datos de origen ($base_origin)? (si/no): ", ['si', 'no']);        
 
         
