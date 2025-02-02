@@ -1,5 +1,5 @@
 <?php
-function obtenerValores ($pdo_origin, $base_origin, $tablas_origin, $pdo_destination, $base_destination, $tablas_destination, $tabla_destination) {
+function obtenerValores ($pdo_origin, $base_origin, $tablas_origin, $pdo_destination, $base_destination, $tablas_destination, $tabla_destination, $secuencial) {
     $mapeos = [];
     // Valores para insertar en la tabla de destino
     foreach ($tablas_destination[$tabla_destination] as $campo_dest) {
@@ -287,6 +287,17 @@ function obtenerValores ($pdo_origin, $base_origin, $tablas_origin, $pdo_destina
             $valores[] = implode(", ", $valores_convertidos);
         } else {
             $valores[] = "{$mapeo['base_datos']}.{$mapeo['tabla']}.{$mapeo['campo']}";
+        }
+        if ($secuencial === 'si') {
+            while (true) {
+                echo "\nEstablece un alias para este campo ".$mapeo['campo'].":\n";
+                $alias = trim(fgets(STDIN));
+                $confirmar_alias = obtenerEntradaValida("> ¿Es correcto este alias? (si/no): ", ['si', 'no']);
+                if ($confirmar_alias === 'si') {
+                    $mapeo['alias'] = $alias;
+                    break;
+                }
+            }
         }
         echo "\nSiguiente campo....\n\n";
         $mapeos[] = $mapeo;

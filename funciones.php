@@ -16,5 +16,6 @@ require_once 'functions/seleccionarTabla.php';
 require_once 'functions/seleccionarCampo.php';
 require_once 'functions/transformarCampo.php';
 require_once 'functions/actualizarCampo.php';
+require_once 'functions/generarSentenciaConNumerarFilasSecuencialmente.php';
 
 

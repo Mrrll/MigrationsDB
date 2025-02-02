@@ -23,14 +23,17 @@ function migrarDatos($base_origin, $base_destination, $tablas_origin, $tablas_de
             $campos_adicionales = crearCampoAdicional($base_destination, $tabla_destination);
         }
 
+        $secuencial = obtenerEntradaValida("> ¿Deseas enumerar las filas secuencialmente de las tablas? (si/no): ", ['si', 'no']);
+        
         echo "\nCampos disponibles en la tabla $tabla_destination:\n";         
 
         // Valores para insertar en la tabla de destino
-        $mapeos = obtenerValores($pdo_origin, $base_origin, $tablas_origin, $pdo_destination, $base_destination, $tablas_destination, $tabla_destination);
+        $mapeos = obtenerValores($pdo_origin, $base_origin, $tablas_origin, $pdo_destination, $base_destination, $tablas_destination, $tabla_destination, $secuencial);
 
         echo "\nResumen de mapeos para la tabla $tabla_destination:\n";
         // Resumen de mapeos
         resumenMapeos($mapeos);
+        echo "\n";        
 
         $validar = obtenerEntradaValida("> ¿Deseas ver la sentencia para $tabla_destination? (si/no): ", ['si', 'no']);
         if ($validar === 'si') {
@@ -48,7 +51,7 @@ function migrarDatos($base_origin, $base_destination, $tablas_origin, $tablas_de
             $on_duplicate_key_update = generarOnDuplicateKeyUpdate($pdo_destination, $base_destination, $tabla_destination);
 
             // Generar sentencia SQL
-            $insert_sql = generarSentenciaSql($base_destination, $tabla_destination, $campos_dest, $valores['valores'], $valores['fuentes'], $valores['join_clauses'], $on_duplicate_key_update);
+            $insert_sql = generarSentenciaSql($base_destination, $tabla_destination, $campos_dest, $valores['valores'], $valores['fuentes'], $valores['join_clauses'], $on_duplicate_key_update, $mapeos, $secuencial);
         }
 
         $sentencias_sql[] = $insert_sql;
@@ -68,16 +71,16 @@ function migrarDatos($base_origin, $base_destination, $tablas_origin, $tablas_de
         echo "$sql\n";
     }
 
-    $confirmar = obtenerEntradaValida("> ¿Deseas ejecutar las sentencias SQL generadas? (si/no): ", ['si', 'no']);
-    if ($confirmar === 'si') {
-        // Ejecutar sentencias SQL
-        $ejecutar_sentencias = ejecutarSentenciasSql($pdo_destination, $sentencias_sql);
-    }
+    // $confirmar = obtenerEntradaValida("> ¿Deseas ejecutar las sentencias SQL generadas? (si/no): ", ['si', 'no']);
+    // if ($confirmar === 'si') {
+    //     // Ejecutar sentencias SQL
+    //     $ejecutar_sentencias = ejecutarSentenciasSql($pdo_destination, $sentencias_sql);
+    // }
 
-    if ($ejecutar_sentencias) {
-        // Eliminar campos adicionales
-        eliminarCampoAdicional($pdo_destination, $base_destination, $campos_adicionales);
-    }
+    // if ($ejecutar_sentencias) {
+    //     // Eliminar campos adicionales
+    //     eliminarCampoAdicional($pdo_destination, $base_destination, $campos_adicionales);
+    // }
 
-    echo "Proceso finalizado. ¡Hasta luego!\n";
+    // echo "Proceso finalizado. ¡Hasta luego!\n";
 }
