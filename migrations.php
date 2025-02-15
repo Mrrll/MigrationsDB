@@ -18,7 +18,7 @@ $tablas_destination = obtenerTablasYCampos($pdo_destination, $base_destination);
 
 while (true) {
     echo "\nLista de opciones del proceso de migración:\n";
-    $opcion = obtenerEntradaValida("> Selecciona una opción:\n", ["Transformar valores en la base de datos de origen ($base_origin)", "Actualizar valores en la base de datos de origen ($base_origin)", "Migrar datos de la base de datos de origen ($base_origin) a la base de datos de destino ($base_destination)", "Actualizar valores en la base de datos de destino ($base_destination)", "Salir"], true);
+    $opcion = obtenerEntradaValida("> Selecciona una opción:\n", ["Transformar valores en la base de datos de origen ($base_origin)", "Actualizar valores en la base de datos de origen ($base_origin)", "Migrar datos de la base de datos de origen ($base_origin) a la base de datos de destino ($base_destination)", "Actualizar valores en la base de datos de destino ($base_destination)", "Transformar valores en la base de datos de destino ($base_destination)", "Salir"], true);
     if ($opcion === 'Salir') {
         echo "\nProceso finalizado. ¡Hasta luego!\n\n";
         break;
@@ -34,6 +34,9 @@ while (true) {
     }
     if ($opcion === "Actualizar valores en la base de datos de destino ($base_destination)") {
         actualizarValores($base_destination, $tablas_destination, $pdo_destination);
+    }
+    if ($opcion === "Transformar valores en la base de datos de destino ($base_destination)") { 
+        transformarValores($base_destination, $tablas_destination, $pdo_destination);
     }
 }
 
