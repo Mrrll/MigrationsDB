@@ -62,8 +62,7 @@ function migrarDatos($base_origin, $base_destination, $tablas_origin, $tablas_de
         }
     }
     if ($continuar === 'no') {
-        echo "\nProceso de migración finalizado.\n";
-        return;
+        echo "\nProceso de anidación finalizado.\n";        
     }
     // Mostrar sentencias SQL generadas
     echo "\nSentencias SQL generadas:\n";
