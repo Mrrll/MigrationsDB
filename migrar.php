@@ -55,7 +55,7 @@ function migrarDatos($base_origin, $base_destination, $tablas_origin, $tablas_de
         }
 
         $sentencias_sql[] = $insert_sql;
-
+        echo "\n";
         $anidar = obtenerEntradaValida("> ¿Deseas anidar otra sentencia SQL antes de ejecutar? (si/no): ", ['si', 'no']);
         if ($anidar === 'no') {
             break;
@@ -68,19 +68,19 @@ function migrarDatos($base_origin, $base_destination, $tablas_origin, $tablas_de
     // Mostrar sentencias SQL generadas
     echo "\nSentencias SQL generadas:\n";
     foreach ($sentencias_sql as $sql) {
-        echo "$sql\n";
+        echo "$sql\n\n";
     }
 
-    // $confirmar = obtenerEntradaValida("> ¿Deseas ejecutar las sentencias SQL generadas? (si/no): ", ['si', 'no']);
-    // if ($confirmar === 'si') {
-    //     // Ejecutar sentencias SQL
-    //     $ejecutar_sentencias = ejecutarSentenciasSql($pdo_destination, $sentencias_sql);
-    // }
+    $confirmar = obtenerEntradaValida("> ¿Deseas ejecutar las sentencias SQL generadas? (si/no): ", ['si', 'no']);
+    if ($confirmar === 'si') {
+        // Ejecutar sentencias SQL
+        $ejecutar_sentencias = ejecutarSentenciasSql($pdo_destination, $sentencias_sql);
+    }
 
-    // if ($ejecutar_sentencias) {
-    //     // Eliminar campos adicionales
-    //     eliminarCampoAdicional($pdo_destination, $base_destination, $campos_adicionales);
-    // }
+    if ($ejecutar_sentencias && !empty($campos_adicionales)) {
+        // Eliminar campos adicionales
+        eliminarCampoAdicional($pdo_destination, $base_destination, $campos_adicionales);
+    }
 
-    // echo "Proceso finalizado. ¡Hasta luego!\n";
+    echo "Proceso finalizado. ¡Hasta luego!\n";
 }

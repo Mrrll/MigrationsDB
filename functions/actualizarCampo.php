@@ -17,20 +17,20 @@ function actualizarCampo($base, $tabla, $campo, $pdo, $tablas)
             echo "> Introduce el valor de la condición WHERE ($campo_where $operador): ";
             $condicion_between = trim(fgets(STDIN));
             echo "> Introduce el valor de la condición BETWEEN ($campo_where AND): ";
-            $condicion_and = trim(fgets(STDIN));
-            $update_sql = "UPDATE $base.$tabla SET $campo = :nuevo_valor WHERE $campo_where BETWEEN :condicion_between AND :condicion_and;";
+            $condicion_where = trim(fgets(STDIN));
+            $update_sql = "UPDATE $base.$tabla SET $campo = $nuevo_valor WHERE $campo_where BETWEEN $condicion_between AND $condicion_where;";
         } elseif ($operador === 'IN') {
             echo "> Introduce los valores de la condición IN (separados por comas): ";
             $condicion_in = trim(fgets(STDIN));
-            $condicion_in = "($condicion_in)";
-            $update_sql = "UPDATE $base.$tabla SET $campo = :nuevo_valor WHERE $campo_where IN :condicion_in;";
+            $condicion_where = "($condicion_in)";
+            $update_sql = "UPDATE $base.$tabla SET $campo = $nuevo_valor WHERE $campo_where IN $condicion_where;";
         } else {
             echo "> Introduce el valor de la condición WHERE ($campo_where $operador): ";
             $condicion_where = trim(fgets(STDIN));
-            $update_sql = "UPDATE $base.$tabla SET $campo = :nuevo_valor WHERE $campo_where $operador :condicion_where;";
+            $update_sql = "UPDATE $base.$tabla SET $campo = $nuevo_valor WHERE $campo_where $operador $condicion_where;";
         }
     } else {
-        $update_sql = "UPDATE $base.$tabla SET $campo = :nuevo_valor;";
+        $update_sql = "UPDATE $base.$tabla SET $campo = $nuevo_valor;";
     }
 
 
@@ -40,11 +40,8 @@ function actualizarCampo($base, $tabla, $campo, $pdo, $tablas)
 
     if ($confirmar === 'si') {
         try {
-            $stmt = $pdo->prepare($update_sql);
-            $stmt->execute([
-                ':nuevo_valor' => $nuevo_valor,
-                ':condicion_where' => $condicion_where,
-            ]);
+            $stmt = $pdo->prepare($update_sql);            
+            $stmt->execute();            
             $affected_rows = $stmt->rowCount();
             echo "\nDatos actualizados exitosamente en $tabla. Registros afectados: $affected_rows\n\n";
         } catch (PDOException $e) {
