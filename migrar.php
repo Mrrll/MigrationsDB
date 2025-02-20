@@ -35,23 +35,25 @@ function migrarDatos($base_origin, $base_destination, $tablas_origin, $tablas_de
         resumenMapeos($mapeos);
         echo "\n";        
 
+        $campos_dest = array_column($mapeos, 'campo_destination');
+        
+        // Generar valores y fuentes para la sentencia SQL
+        $valores = generarValoresFuentes($mapeos);
+        // Comprobar si hay campos de origen válidos
+        if (empty($valores['valores'])) {
+            echo "\nError: No se encontraron campos de origen válidos.\n";
+            continue;
+        }
+
+        // Verificar si la tabla de destino tiene columnas únicas
+        $on_duplicate_key_update = generarOnDuplicateKeyUpdate($pdo_destination, $base_destination, $tabla_destination);
+
+        // Generar sentencia SQL
+        $insert_sql = generarSentenciaSql($base_destination, $tabla_destination, $campos_dest, $valores['valores'], $valores['fuentes'], $valores['join_clauses'], $on_duplicate_key_update, $mapeos, $secuencial);
         $validar = obtenerEntradaValida("> ¿Deseas ver la sentencia para $tabla_destination? (si/no): ", ['si', 'no']);
         if ($validar === 'si') {
-            $campos_dest = array_column($mapeos, 'campo_destination');
-            
-            // Generar valores y fuentes para la sentencia SQL
-            $valores = generarValoresFuentes($mapeos);
-            // Comprobar si hay campos de origen válidos
-            if (empty($valores['valores'])) {
-                echo "\nError: No se encontraron campos de origen válidos.\n";
-                continue;
-            }
-
-            // Verificar si la tabla de destino tiene columnas únicas
-            $on_duplicate_key_update = generarOnDuplicateKeyUpdate($pdo_destination, $base_destination, $tabla_destination);
-
-            // Generar sentencia SQL
-            $insert_sql = generarSentenciaSql($base_destination, $tabla_destination, $campos_dest, $valores['valores'], $valores['fuentes'], $valores['join_clauses'], $on_duplicate_key_update, $mapeos, $secuencial);
+            echo "\nSentencia SQL generada para la tabla $tabla_destination:\n";
+            echo "$insert_sql\n";
         }
 
         $sentencias_sql[] = $insert_sql;

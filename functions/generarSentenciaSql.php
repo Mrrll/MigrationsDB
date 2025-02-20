@@ -33,7 +33,6 @@ function generarSentenciaSql($base_destination, $tabla_destination, $campos_dest
         }
         $insert_sql .= " " . $on_duplicate_key_update . ";";
     }
-    $insert_sql .= ' SET FOREIGN_KEY_CHECKS = 1;';
-    echo "\nSQL generado:\n$insert_sql\n";
+    $insert_sql .= ' SET FOREIGN_KEY_CHECKS = 1;';    
     return $insert_sql;
 }
