@@ -25,15 +25,22 @@ function migrarDatos($base_origin, $base_destination, $tablas_origin, $tablas_de
 
         $secuencial = obtenerEntradaValida("> ¿Deseas enumerar las filas secuencialmente de las tablas? (si/no): ", ['si', 'no']);
         
-        echo "\nCampos disponibles en la tabla $tabla_destination:\n";         
+        while (true) {            
+            echo "\nCampos disponibles en la tabla $tabla_destination:\n";         
+    
+            // Valores para insertar en la tabla de destino
+            $mapeos = obtenerValores($pdo_origin, $base_origin, $tablas_origin, $pdo_destination, $base_destination, $tablas_destination, $tabla_destination, $secuencial);
+    
+            echo "\nResumen de mapeos para la tabla $tabla_destination:\n";
+            // Resumen de mapeos
+            resumenMapeos($mapeos);
 
-        // Valores para insertar en la tabla de destino
-        $mapeos = obtenerValores($pdo_origin, $base_origin, $tablas_origin, $pdo_destination, $base_destination, $tablas_destination, $tabla_destination, $secuencial);
-
-        echo "\nResumen de mapeos para la tabla $tabla_destination:\n";
-        // Resumen de mapeos
-        resumenMapeos($mapeos);
-        echo "\n";        
+            $confirmar_mapeos = obtenerEntradaValida("> ¿Deseas confirmar los mapeos para la tabla $tabla_destination? (si/no): ", ['si', 'no']);
+            if ($confirmar_mapeos === 'si') {
+                break;
+            }
+            echo "\n";        
+        }
 
         $campos_dest = array_column($mapeos, 'campo_destination');
         

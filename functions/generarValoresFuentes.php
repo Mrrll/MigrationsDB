@@ -22,27 +22,15 @@ function generarValoresFuentes($mapeos){
 
             $search_string = "{$mapeo['base_datos']}.{$mapeo['tabla']}";
 
-            // $found = false;
-
-            // foreach ($join_clauses as $clause) {
-            //     echo "\n\n" . $clause . " != " . $search_string . "\n\n";
-            //     if (strpos($clause, $search_string) !== false) {
-            //         $found = true;
-            //         break;
-            //     }
-            // }
-
-            // if (!$found) {
-                $fuentes[] = "{$mapeo['base_datos']}.{$mapeo['tabla']}";
-            // }
+            $fuentes[] = "{$mapeo['base_datos']}.{$mapeo['tabla']}";
+            
         } else {
             $valores[] = "{$mapeo['base_datos']}.{$mapeo['tabla']}.{$mapeo['campo']}";
             $search_string = "{$mapeo['base_datos']}.{$mapeo['tabla']}";
 
             $found = false;
 
-            foreach ($join_clauses as $clause) {
-                echo "\n\n" . $clause . " != " . $search_string . "\n\n";
+            foreach ($join_clauses as $clause) {                
                 if (strpos($clause, $search_string) !== false) {
                     $found = true;
                     break;
