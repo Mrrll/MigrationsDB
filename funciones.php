@@ -19,5 +19,7 @@ require_once 'functions/actualizarCampo.php';
 require_once 'functions/generarSentenciaConNumerarFilasSecuencialmente.php';
 require_once 'functions/crearCampoAdicional.php';
 require_once 'functions/eliminarCampoAdicional.php';
+require_once 'functions/condicionRelacion.php';
+require_once 'functions/obtenerReferencia.php';
 
 

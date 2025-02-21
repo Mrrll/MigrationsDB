@@ -33,84 +33,10 @@ function obtenerValores($pdo_origin, $base_origin, $tablas_origin, $pdo_destinat
 
                 $relacionar_condicion = obtenerEntradaValida("> ¿Quieres agregar una condición de relación para este campo $campo_dest_name? (si/no): ", ['si', 'no']);
                 if ($relacionar_condicion === 'si') {
-                    echo "\nPara la condición de relación, selecciona el primer campo:\n";
 
-                    while (true) {
-                        $base_datos_origen = obtenerEntradaValida("> ¿En qué base de datos se encuentra la tabla para el primer campo? ($base_origin/$base_destination): ", [$base_origin, $base_destination], false, true);                        
-                        echo "\nHas seleccionado la base de datos: $base_datos_origen\n";
-                        $confirmar_base_origen = obtenerEntradaValida("> ¿Es correcta esta base de datos? (si/no): ", ['si', 'no']);
-                        if ($confirmar_base_origen === 'si') {
-                            break;
-                        }
-                    }
+                    $condicion_relacion = condicionRelacion($base_origin, $base_destination, $tablas_origin, $tablas_destination, $pdo_origin, $pdo_destination);
 
-                    $tablas_origen = ($base_datos_origen === $base_origin) ? $tablas_origin : $tablas_destination;
-                    $pdo = ($base_datos_origen === $base_origin) ? $pdo_origin : $pdo_destination;
-
-                    while (true) {
-                        echo "\nTablas disponibles en $base_datos_origen:\n";
-                        $tabla_origen = obtenerEntradaValida("> Selecciona la tabla para el primer campo:\n", array_keys($tablas_origen), true);
-                        echo "\nHas seleccionado la tabla: $tabla_origen\n";
-                        mostrarCampos($pdo, $tabla_origen);
-                        $confirmar_tabla_origen = obtenerEntradaValida("> ¿Es correcta esta tabla? (si/no): ", ['si', 'no']);
-                        if ($confirmar_tabla_origen === 'si') {
-                            break;
-                        }
-                    }
-
-                    while (true) {
-                        echo "\nCampos disponibles en la tabla $tabla_origen:\n";
-                        $campos_origen = array_column($tablas_origen[$tabla_origen], 'Field');
-                        $campo_origen = obtenerEntradaValida("> Selecciona el primer campo:\n", $campos_origen, true);
-                        echo "\nHas seleccionado el campo: $campo_origen\n";
-                        $confirmar_campo_origen = obtenerEntradaValida("> ¿Es correcto este campo? (si/no): ", ['si', 'no']);
-                        if ($confirmar_campo_origen === 'si') {
-                            break;
-                        }
-                    }
-
-                    echo "\nAhora selecciona el segundo campo:\n";
-
-                    while (true) {
-                        $base_datos_destino = obtenerEntradaValida("> ¿En qué base de datos se encuentra la tabla para el segundo campo? ($base_origin/$base_destination): ", [$base_origin, $base_destination], false, true);
-                        if ($base_datos_destino === 'rectificar') {
-                            continue;
-                        }
-                        echo "\nHas seleccionado la base de datos: $base_datos_destino\n";
-                        $confirmar_base_destino = obtenerEntradaValida("> ¿Es correcta esta base de datos? (si/no): ", ['si', 'no']);
-                        if ($confirmar_base_destino === 'si') {
-                            break;
-                        }
-                    }
-
-                    $tablas_destino = ($base_datos_destino === $base_origin) ? $tablas_origin : $tablas_destination;
-                    $pdo = ($base_datos_destino === $base_origin) ? $pdo_origin : $pdo_destination;
-
-                    while (true) {
-                        echo "\nTablas disponibles en $base_datos_destino:\n";
-                        $tabla_destino = obtenerEntradaValida("> Selecciona la tabla para el segundo campo:\n", array_keys($tablas_destino), true);
-                        echo "\nHas seleccionado la tabla: $tabla_destino\n";
-                        mostrarCampos($pdo, $tabla_destino);
-                        $confirmar_tabla_destino = obtenerEntradaValida("> ¿Es correcta esta tabla? (si/no): ", ['si', 'no']);
-                        if ($confirmar_tabla_destino === 'si') {
-                            break;
-                        }
-                    }
-
-                    while (true) {
-                        echo "\nCampos disponibles en la tabla $tabla_destino:\n";
-                        $campos_destino = array_column($tablas_destino[$tabla_destino], 'Field');
-                        $campo_destino = obtenerEntradaValida("> Selecciona el segundo campo:\n", $campos_destino, true);
-                        echo "\nHas seleccionado el campo: $campo_destino\n";
-                        $confirmar_campo_destino = obtenerEntradaValida("> ¿Es correcto este campo? (si/no): ", ['si', 'no']);
-                        if ($confirmar_campo_destino === 'si') {
-                            break;
-                        }
-                    }
-
-                    $condicion_relacion = "$base_datos_origen.$tabla_origen.$campo_origen = $base_datos_destino.$tabla_destino.$campo_destino";
-
-                    $mapeo['condicion_relacion'] = $condicion_relacion;
+                    $mapeo['condicion_relacion'] = $condicion_relacion;                    
 
                     echo "Condición de relación agregada: $condicion_relacion\n";
 
@@ -125,47 +51,12 @@ function obtenerValores($pdo_origin, $base_origin, $tablas_origin, $pdo_destinat
                 echo "\nSiguiente campo....\n\n";
                 $i++;
             }
-            if ($manual === 'no') {                
-                while (true) {
-                    $base_datos = obtenerEntradaValida("> ¿En qué base de datos se encuentra el dato para $campo_dest_name? ($base_origin/$base_destination): ", [$base_origin, $base_destination]);
-                    echo "\nHas seleccionado la base de datos: $base_datos\n";
-                    $confirmar_base = obtenerEntradaValida("> ¿Es correcta esta base de datos? (si/no): ", ['si', 'no']);
-                    if ($confirmar_base === 'si') {
-                        break;
-                    }
-                }
-    
-                $tablas_fuente = ($base_datos === $base_origin) ? $tablas_origin : $tablas_destination;
-                $pdo = ($base_datos === $base_origin) ? $pdo_origin : $pdo_destination;
-    
-                while (true) {
-                    echo "\nTablas disponibles en $base_datos:\n";
-                    $tabla_fuente = obtenerEntradaValida("> Selecciona la tabla fuente para $campo_dest_name:\n", array_keys($tablas_fuente), true);
-                    echo "\nHas seleccionado la tabla: $tabla_fuente\n";
-                    mostrarCampos($pdo, $tabla_fuente);
-                    $confirmar_tabla_fuente = obtenerEntradaValida("> ¿Es correcta esta tabla? (si/no): ", ['si', 'no']);
-                    if ($confirmar_tabla_fuente === 'si') {
-                        break;
-                    }
-                }
-    
-                while (true) {
-                    echo "\nCampos disponibles en la tabla $tabla_fuente:\n";
-                    $campo_fuente = obtenerEntradaValida("> Selecciona el campo fuente para $campo_dest_name:\n", array_column($tablas_fuente[$tabla_fuente], 'Field'), true);
-                    echo "\nHas seleccionado el campo: $campo_fuente\n";
-                    $confirmar_campo_fuente = obtenerEntradaValida("> ¿Es correcto este campo? (si/no): ", ['si', 'no']);
-                    if ($confirmar_campo_fuente === 'si') {
-                        break;
-                    }
-                }
-    
-                $mapeo = [
-                    'campo_destination' => $campo_dest_name,
-                    'tabla' => $tabla_fuente,
-                    'campo' => $campo_fuente,
-                    'base_datos' => $base_datos
-                ];
-    
+            if ($manual === 'no') {
+
+                $mapeo = obtenerReferencia($campo_dest_name, $base_origin, $base_destination, $tablas_origin, $tablas_destination, $pdo_origin, $pdo_destination);
+                $campo_fuente = $mapeo['campo'];
+                $tabla_fuente = $mapeo['tabla'];                
+
                 $concatenar = obtenerEntradaValida("> ¿Quieres concatenar un valor a este campo $campo_dest_name? (si/no): ", ['si', 'no']);
                 if ($concatenar === 'si') {
                     echo "> Introduce el valor a concatenar: ";
@@ -175,84 +66,8 @@ function obtenerValores($pdo_origin, $base_origin, $tablas_origin, $pdo_destinat
     
                 $relacionar_condicion = obtenerEntradaValida("> ¿Quieres agregar una condición de relación para este campo $campo_dest_name? (si/no): ", ['si', 'no']);
                 if ($relacionar_condicion === 'si') {
-                    echo "\nPara la condición de relación, selecciona el primer campo:\n";
-    
-                    while (true) {
-                        $base_datos_origen = obtenerEntradaValida("> ¿En qué base de datos se encuentra la tabla para el primer campo? ($base_origin/$base_destination): ", [$base_origin, $base_destination], false, true);
-                        if ($base_datos_origen === 'rectificar') {
-                            continue;
-                        }
-                        echo "\nHas seleccionado la base de datos: $base_datos_origen\n";
-                        $confirmar_base_origen = obtenerEntradaValida("> ¿Es correcta esta base de datos? (si/no): ", ['si', 'no']);
-                        if ($confirmar_base_origen === 'si') {
-                            break;
-                        }
-                    }
-    
-                    $tablas_origen = ($base_datos_origen === $base_origin) ? $tablas_origin : $tablas_destination;
-                    $pdo = ($base_datos_origen === $base_origin) ? $pdo_origin : $pdo_destination;
-    
-                    while (true) {
-                        echo "\nTablas disponibles en $base_datos_origen:\n";
-                        $tabla_origen = obtenerEntradaValida("> Selecciona la tabla para el primer campo:\n", array_keys($tablas_origen), true);
-                        echo "\nHas seleccionado la tabla: $tabla_origen\n";
-                        mostrarCampos($pdo, $tabla_origen);
-                        $confirmar_tabla_origen = obtenerEntradaValida("> ¿Es correcta esta tabla? (si/no): ", ['si', 'no']);
-                        if ($confirmar_tabla_origen === 'si') {
-                            break;
-                        }
-                    }
-    
-                    while (true) {
-                        echo "\nCampos disponibles en la tabla $tabla_origen:\n";
-                        $campos_origen = array_column($tablas_origen[$tabla_origen], 'Field');
-                        $campo_origen = obtenerEntradaValida("> Selecciona el primer campo:\n", $campos_origen, true);
-                        echo "\nHas seleccionado el campo: $campo_origen\n";
-                        $confirmar_campo_origen = obtenerEntradaValida("> ¿Es correcto este campo? (si/no): ", ['si', 'no']);
-                        if ($confirmar_campo_origen === 'si') {
-                            break;
-                        }
-                    }
-    
-                    echo "\nAhora selecciona el segundo campo:\n";
-    
-                    while (true) {
-                        $base_datos_destino = obtenerEntradaValida("> ¿En qué base de datos se encuentra la tabla para el segundo campo? ($base_origin/$base_destination): ", [$base_origin, $base_destination], false, true);
-                        if ($base_datos_destino === 'rectificar') {
-                            continue;
-                        }
-                        echo "\nHas seleccionado la base de datos: $base_datos_destino\n";
-                        $confirmar_base_destino = obtenerEntradaValida("> ¿Es correcta esta base de datos? (si/no): ", ['si', 'no']);
-                        if ($confirmar_base_destino === 'si') {
-                            break;
-                        }
-                    }
-    
-                    $tablas_destino = ($base_datos_destino === $base_origin) ? $tablas_origin : $tablas_destination;
-                    $pdo = ($base_datos_destino === $base_origin) ? $pdo_origin : $pdo_destination;
-                    while (true) {
-                        echo "\nTablas disponibles en $base_datos_destino:\n";
-                        $tabla_destino = obtenerEntradaValida("> Selecciona la tabla para el segundo campo:\n", array_keys($tablas_destino), true);
-                        echo "\nHas seleccionado la tabla: $tabla_destino\n";
-                        mostrarCampos($pdo, $tabla_destino);
-                        $confirmar_tabla_destino = obtenerEntradaValida("> ¿Es correcta esta tabla? (si/no): ", ['si', 'no']);
-                        if ($confirmar_tabla_destino === 'si') {
-                            break;
-                        }
-                    }
-    
-                    while (true) {
-                        echo "\nCampos disponibles en la tabla $tabla_destino:\n";
-                        $campos_destino = array_column($tablas_destino[$tabla_destino], 'Field');
-                        $campo_destino = obtenerEntradaValida("> Selecciona el segundo campo:\n", $campos_destino, true);
-                        echo "\nHas seleccionado el campo: $campo_destino\n";
-                        $confirmar_campo_destino = obtenerEntradaValida("> ¿Es correcto este campo? (si/no): ", ['si', 'no']);
-                        if ($confirmar_campo_destino === 'si') {
-                            break;
-                        }
-                    }
-    
-                    $condicion_relacion = "$base_datos_origen.$tabla_origen.$campo_origen = $base_datos_destino.$tabla_destino.$campo_destino";
+                    
+                    $condicion_relacion = condicionRelacion($base_origin, $base_destination, $tablas_origin, $tablas_destination, $pdo_origin, $pdo_destination);
     
                     $mapeo['condicion_relacion'] = $condicion_relacion;
     
