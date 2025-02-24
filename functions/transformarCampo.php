@@ -10,8 +10,7 @@ function transformarCampo($base_origin, $tabla_origin, $campo_origin, $pdo_origi
         while (true) {
             echo "\n> Introduce el número de decimales a truncar: ";
             $numero_decimales = trim(fgets(STDIN));
-            var_dump($numero_decimales);
-            var_dump(is_numeric($numero_decimales));
+            
             if (!is_numeric($numero_decimales) && $numero_decimales < 0) {
                 break;
             }

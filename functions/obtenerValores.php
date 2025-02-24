@@ -54,7 +54,7 @@ function obtenerValores($pdo_origin, $base_origin, $tablas_origin, $pdo_destinat
             if ($manual === 'no') {
 
                 $mapeo = obtenerReferencia($campo_dest_name, $base_origin, $base_destination, $tablas_origin, $tablas_destination, $pdo_origin, $pdo_destination);
-                var_dump($mapeo);
+                
                 $campo_fuente = $mapeo['campo'];
                 $tabla_fuente = $mapeo['tabla'];                
 

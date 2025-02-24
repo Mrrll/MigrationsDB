@@ -20,14 +20,35 @@ function migrarDatos($base_origin, $base_destination, $tablas_origin, $tablas_de
 
         $añadir_campo = obtenerEntradaValida("> ¿Quieres añadir un campo adicional a la tabla $tabla_destination? (si/no): ", ['si', 'no']);
         if ($añadir_campo === 'si') {
-            $campos_adicionales = crearCampoAdicional($base_destination, $tabla_destination);
+            $campos_adicionales[] = crearCampoAdicional($base_destination, $tabla_destination);
+            
+            $sentencias_sql[] = $campos_adicionales[0]['sql'];
+            while (true) {
+                $anidar_campo = obtenerEntradaValida("> ¿Deseas añadir otro campo adicional a la tabla $tabla_destination? (si/no): ", ['si', 'no']);
+                if ($anidar_campo === 'no') {
+                    break;
+                }
+                
+                $campos_adicionales[] = crearCampoAdicional($base_destination, $tabla_destination);                
+                $sentencias_sql[] = $campos_adicionales[0]['sql'];
+                
+            }
         }
 
         $secuencial = obtenerEntradaValida("> ¿Deseas enumerar las filas secuencialmente de las tablas? (si/no): ", ['si', 'no']);
         
         while (true) {            
-            echo "\nCampos disponibles en la tabla $tabla_destination:\n";         
-    
+            echo "\nCampos disponibles en la tabla $tabla_destination:\n";    
+            if (!empty($campos_adicionales)) {
+                foreach ($campos_adicionales as $campo_adicional) {
+                    $nuevo_campo =[ 
+                        "Field" => $campo_adicional['campo'],
+                        "Type" => $campo_adicional['tipo']
+                    ];
+                    array_push($tablas_destination[$tabla_destination], $nuevo_campo);
+                }
+            }     
+            
             // Valores para insertar en la tabla de destino
             $mapeos = obtenerValores($pdo_origin, $base_origin, $tablas_origin, $pdo_destination, $base_destination, $tablas_destination, $tabla_destination, $secuencial);
     
