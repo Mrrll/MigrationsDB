@@ -4,6 +4,7 @@ function generarValoresFuentes($mapeos)
     $valores = [];
     $fuentes = [];
     $join_clauses = [];
+    $fuentes_filtradas = [];
     foreach ($mapeos as $mapeo) {        
         $alias = null;
         echo "\n\n";
