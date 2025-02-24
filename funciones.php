@@ -21,5 +21,6 @@ require_once 'functions/crearCampoAdicional.php';
 require_once 'functions/eliminarCampoAdicional.php';
 require_once 'functions/condicionRelacion.php';
 require_once 'functions/obtenerReferencia.php';
+require_once 'functions/filtrarFuentes.php';
 
 
