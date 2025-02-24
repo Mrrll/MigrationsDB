@@ -54,6 +54,7 @@ function obtenerValores($pdo_origin, $base_origin, $tablas_origin, $pdo_destinat
             if ($manual === 'no') {
 
                 $mapeo = obtenerReferencia($campo_dest_name, $base_origin, $base_destination, $tablas_origin, $tablas_destination, $pdo_origin, $pdo_destination);
+                var_dump($mapeo);
                 $campo_fuente = $mapeo['campo'];
                 $tabla_fuente = $mapeo['tabla'];                
 
@@ -83,8 +84,9 @@ function obtenerValores($pdo_origin, $base_origin, $tablas_origin, $pdo_destinat
     
                 if (strpos($campo_dest_type, 'timestamp') !== false || strpos($campo_dest_type, 'datetime') !== false) {
                     echo "El campo $campo_dest_name es de tipo TIMESTAMP o DATETIME. Verificando formato y convirtiendo si es necesario.\n";
+                    $pdo = $mapeo['base_datos'] === $base_origin ? $pdo_origin : $pdo_destination;
     
-                    $query = $pdo_origin->prepare("SELECT `$campo_fuente` FROM `$tabla_fuente`");
+                    $query = $pdo->prepare("SELECT `$campo_fuente` FROM `$tabla_fuente`");
                     $query->execute();
                     $valores_origen = $query->fetchAll(PDO::FETCH_COLUMN);
     
