@@ -106,7 +106,7 @@ function obtenerValores($pdo_origin, $base_origin, $tablas_origin, $pdo_destinat
                 }
                 if ($secuencial === 'si') {
                     while (true) {
-                        echo "\nEstablece un alias para este campo " . $mapeo['campo'] . ":\n";
+                        echo "\nEstablece un alias para la secuencia en este campo " . $mapeo['campo'] . ":\n";
                         $alias = trim(fgets(STDIN));
                         $confirmar_alias = obtenerEntradaValida("> ¿Es correcto este alias? (si/no): ", ['si', 'no']);
                         if ($confirmar_alias === 'si') {

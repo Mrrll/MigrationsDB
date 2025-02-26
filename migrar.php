@@ -77,7 +77,7 @@ function migrarDatos($base_origin, $base_destination, $tablas_origin, $tablas_de
         $on_duplicate_key_update = generarOnDuplicateKeyUpdate($pdo_destination, $base_destination, $tabla_destination);
 
         // Generar sentencia SQL
-        $insert_sql = generarSentenciaSql($base_destination, $tabla_destination, $campos_dest, $valores['valores'], $valores['fuentes'], $valores['join_clauses'], $on_duplicate_key_update, $mapeos, $secuencial);
+        $insert_sql = generarSentenciaSql($base_destination, $tabla_destination, $campos_dest, $valores['valores'], $valores['fuentes'], $valores['join_clauses'], $on_duplicate_key_update, $mapeos, $secuencial,$base_origin,$tablas_origin, $tablas_destination);
         $validar = obtenerEntradaValida("> ¿Deseas ver la sentencia para $tabla_destination? (si/no): ", ['si', 'no']);
         if ($validar === 'si') {
             echo "\nSentencia SQL generada para la tabla $tabla_destination:\n";

@@ -1,10 +1,10 @@
 <?php
-function generarSentenciaSql($base_destination, $tabla_destination, $campos_dest, $valores, $fuentes, $join_clauses, $on_duplicate_key_update, $mapeos, $secuencial) {
+function generarSentenciaSql($base_destination, $tabla_destination, $campos_dest, $valores, $fuentes, $join_clauses, $on_duplicate_key_update, $mapeos, $secuencial, $base_origin,$tablas_origin, $tablas_destination) {
     // Generar sentencia SQL
     $insert_sql = 'SET FOREIGN_KEY_CHECKS = 0; ';
     $insert_sql .= "INSERT INTO $base_destination.$tabla_destination (" . implode(", ", $campos_dest) . ") ";
     if ($secuencial === 'si') {
-        $insert_sql .= generarSentenciaConNumerarFilasSecuencialmente($mapeos);
+        $insert_sql .= generarSentenciaConNumerarFilasSecuencialmente($mapeos,$base_origin, $tablas_origin, $tablas_destination);
     } else {
         $fuentes_filtradas = []; 
         $insert_sql .= "SELECT " . implode(", ", $valores);
