@@ -98,6 +98,6 @@ function generarValoresFuentes($mapeos)
     return [
         'valores' => $valores,
         'fuentes' => $fuentes_filtradas,
-        'join_clauses' => $join_clauses
+        'join_clauses' => array_unique($join_clauses)
     ];
 }
