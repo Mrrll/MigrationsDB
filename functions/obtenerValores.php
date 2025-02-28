@@ -21,6 +21,7 @@ function obtenerValores($pdo_origin, $base_origin, $tablas_origin, $pdo_destinat
                 $valor_manual = trim(fgets(STDIN));
                 $mapeos[] = [
                     'campo_destination' => $campo_dest_name,
+                    'type_destination' => $campo_dest_type,
                     'valor_manual' => $valor_manual
                 ];
 
@@ -54,7 +55,7 @@ function obtenerValores($pdo_origin, $base_origin, $tablas_origin, $pdo_destinat
             if ($manual === 'no') {
 
                 $mapeo = obtenerReferencia($campo_dest_name, $base_origin, $base_destination, $tablas_origin, $tablas_destination, $pdo_origin, $pdo_destination);
-                
+                $mapeo['type_destination'] = $campo_dest_type;
                 $campo_fuente = $mapeo['campo'];
                 $tabla_fuente = $mapeo['tabla'];                
 

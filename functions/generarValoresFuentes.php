@@ -5,7 +5,7 @@ function generarValoresFuentes($mapeos)
     $fuentes = [];
     $join_clauses = [];
     $fuentes_filtradas = [];
-    foreach ($mapeos as $mapeo) {        
+    foreach ($mapeos as $mapeo) {            
         $alias = null;
         echo "\n";
         if (isset($mapeo['base_datos'])) {            
@@ -75,6 +75,8 @@ function generarValoresFuentes($mapeos)
                 $fuentes[] = "{$mapeo['base_datos']}.{$mapeo['tabla']}";
             }
         } elseif (
+            strpos($mapeo['type_destination'], 'timestamp') !== false ||
+            strpos($mapeo['type_destination'], 'datetime') !== false ||
             strpos($mapeo['campo_destination'], 'date') !== false ||
             strpos($mapeo['campo_destination'], 'time') !== false ||
             strpos($mapeo['campo_destination'], 'created_at') !== false ||
