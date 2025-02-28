@@ -7,15 +7,17 @@ function generarValoresFuentes($mapeos)
     $fuentes_filtradas = [];
     foreach ($mapeos as $mapeo) {        
         $alias = null;
-        echo "\n\n";
-        $crear_alias = obtenerEntradaValida("> ¿Quieres crear un alias principal para la tabla {$mapeo['base_datos']}.{$mapeo['tabla']} que relaciona con el campo {$mapeo['campo']}? (si/no): ", ['si', 'no']);
-        if ($crear_alias === 'si') {
-            while (true) {
-                echo "> Introduce el alias principal para la tabla {$mapeo['base_datos']}.{$mapeo['tabla']}: ";
-                $alias_principal = trim(fgets(STDIN));
-                $confirmar_alias = obtenerEntradaValida("> ¿Es correcto este alias '$alias_principal'? (si/no): ", ['si', 'no']);
-                if ($confirmar_alias === 'si') {
-                    break;
+        echo "\n";
+        if (isset($mapeo['base_datos'])) {            
+            $crear_alias = obtenerEntradaValida("> ¿Quieres crear un alias principal para la tabla {$mapeo['base_datos']}.{$mapeo['tabla']} que relaciona con el campo {$mapeo['campo']}? (si/no): ", ['si', 'no']);
+            if ($crear_alias === 'si') {
+                while (true) {
+                    echo "> Introduce el alias principal para la tabla {$mapeo['base_datos']}.{$mapeo['tabla']}: ";
+                    $alias_principal = trim(fgets(STDIN));
+                    $confirmar_alias = obtenerEntradaValida("> ¿Es correcto este alias '$alias_principal'? (si/no): ", ['si', 'no']);
+                    if ($confirmar_alias === 'si') {
+                        break;
+                    }
                 }
             }
         }

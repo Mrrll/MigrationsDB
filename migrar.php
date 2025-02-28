@@ -8,6 +8,7 @@ function migrarDatos($base_origin, $base_destination, $tablas_origin, $tablas_de
     $sentencias_sql = [];     
     $ejecutar_sentencias = false;
     $continuar = 'si';
+    $añadir_campo = 'no';
     while (true) {
         echo "\nProceso para migrar de la base de datos de origen ($base_origin) a la base de datos de destino ($base_destination):\n";
         $continuar = obtenerEntradaValida("> ¿Deseas continuar con el proceso? (si/no): ", ['si', 'no']);
@@ -39,7 +40,7 @@ function migrarDatos($base_origin, $base_destination, $tablas_origin, $tablas_de
         
         while (true) {            
             echo "\nCampos disponibles en la tabla $tabla_destination:\n";    
-            if (!empty($campos_adicionales)) {
+            if ($añadir_campo === 'si' && !empty($campos_adicionales)) {
                 foreach ($campos_adicionales as $campo_adicional) {
                     $nuevo_campo =[ 
                         "Field" => $campo_adicional['campo'],
